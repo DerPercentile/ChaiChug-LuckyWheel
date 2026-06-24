@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>กงล้อนำโชค</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;800&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
@@ -24,9 +24,11 @@
     --shadow: 0 18px 40px rgba(74,43,77,0.25);
   }
   *{box-sizing:border-box;}
+  html,body{ height:100%; }
   body{
     margin:0;
     min-height:100vh;
+    min-height:100dvh;
     background:
       radial-gradient(circle at 15% 10%, var(--cream-2) 0%, transparent 45%),
       radial-gradient(circle at 85% 90%, var(--cream-2) 0%, transparent 45%),
@@ -36,7 +38,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:32px 16px;
+    padding:max(28px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
   .card{
     width:100%;
@@ -67,8 +69,8 @@
   }
   .wheel-wrap{
     position:relative;
-    width:min(320px, 80vw);
-    height:min(320px, 80vw);
+    width:clamp(220px, 78vw, 380px);
+    aspect-ratio:1/1;
     margin:0 auto 28px;
   }
   .pointer{
@@ -100,7 +102,10 @@
     box-shadow:var(--shadow);
   }
   canvas{
-    position:relative;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
     border-radius:50%;
     display:block;
   }
@@ -124,9 +129,13 @@
     color:var(--cream);
     background:linear-gradient(135deg, var(--plum), var(--plum-dark));
     border:none;
-    padding:14px 44px;
+    padding:16px 44px;
     border-radius:999px;
     cursor:pointer;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    user-select:none;
     box-shadow:0 10px 22px rgba(107,63,105,0.35);
     transition:transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
   }
@@ -194,9 +203,12 @@
     color:var(--cream);
     background:var(--plum);
     border:none;
-    padding:11px 30px;
+    padding:13px 30px;
     border-radius:999px;
     cursor:pointer;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
   }
   .sr-only{
     position:absolute; width:1px;height:1px;
@@ -204,6 +216,10 @@
   }
   @media (prefers-reduced-motion: reduce){
     canvas{ transition:none !important; }
+  }
+  @media (min-width: 700px){
+    .card{ max-width:520px; }
+    .wheel-wrap{ margin-bottom:34px; }
   }
 </style>
 </head>
@@ -231,14 +247,14 @@
   <div class="modal">
     <div class="modal-icon" id="modalIcon">☁️</div>
     <h2 id="modalTitle">ไม่ได้อะไรเลย</h2>
-    <p id="modalDesc">เก็บดวงไว้รอบหน้านะ ของหวานยังรออยู่!</p>
+    <p id="modalDesc">เสียใจด้วย!</p>
     <button id="modalClose">ปิด</button>
   </div>
 </div>
 
 <script>
   // ---- ตั้งค่ารางวัล ----
-  // ค่าเริ่มต้น: ทุกช่องล็อกไป "ไม่ได้อะไรเลย" ยกเว้น เพิ่มท็อปปิ้ง และ รีฟิลฟรี ที่เปิดให้สุ่มได้จริง 1%
+  // ค่าเริ่มต้น: ทุกช่องล็อกไป "ไม่ได้อะไรเลย" ยกเว้น เพิ่มท็อปปิ้ง และ รีฟิลฟรี ที่เปิดให้สุ่มได้จริง 0.5%
   const segments = [
     { label: ['ส่วนลด', '5 บาท'], color: 'var(--mint)',     hex:'#B8E0A0' },
     { label: ['เพิ่ม', 'ท็อปปิ้ง'], color: 'var(--peach)',   hex:'#FFB6A3' },
@@ -252,24 +268,36 @@
   const REFILL_INDEX = 5;           // รีฟิลฟรี 1 ครั้ง
   const LOSE_INDEX = segments.length - 1; // ไม่ได้อะไรเลย
 
-  // สุ่มผลลัพธ์แบบมีน้ำหนัก: เพิ่มท็อปปิ้ง 1%, รีฟิลฟรี 1 ครั้ง 1%, ที่เหลือ 98% ไม่ได้อะไรเลย
+  // สุ่มผลลัพธ์แบบมีน้ำหนัก: เพิ่มท็อปปิ้ง 0.5%, รีฟิลฟรี 1 ครั้ง 0.5%, ที่เหลือ 99% ไม่ได้อะไรเลย
   function pickResultIndex(){
     const roll = Math.random() * 100;
-    if (roll < 1) return TOPPING_INDEX;   // 0% - 1%
-    if (roll < 2) return REFILL_INDEX;    // 1% - 2%
-    return LOSE_INDEX;                    // 2% - 100%
+    if (roll < 0.5) return TOPPING_INDEX;   // 0% - 0.5%
+    if (roll < 1) return REFILL_INDEX;      // 0.5% - 1%
+    return LOSE_INDEX;                      // 1% - 100%
   }
 
   const canvas = document.getElementById('wheel');
   const ctx = canvas.getContext('2d');
-  const size = canvas.width;
-  const cx = size/2, cy = size/2;
-  const radius = size/2 - 6;
+  const wheelWrap = document.querySelector('.wheel-wrap');
   const segDeg = 360/segments.length;
+
+  let size = 320;   // ขนาดวงล้อปัจจุบันในหน่วย CSS px (อัปเดตตามจอจริง)
+  let cx = size/2, cy = size/2, radius = size/2 - 6;
+
+  function fitCanvasToDisplay(){
+    const dpr = window.devicePixelRatio || 1;
+    const displaySize = Math.round(wheelWrap.getBoundingClientRect().width);
+    size = displaySize;
+    cx = size/2; cy = size/2; radius = size/2 - 6;
+    canvas.width = Math.round(displaySize * dpr);
+    canvas.height = Math.round(displaySize * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // วาดด้วยหน่วย CSS px แต่บัฟเฟอร์คมชัดระดับ retina
+  }
 
   function drawSprinkles(){
     const sprinkleColors = ['#FFD972','#FFB6A3','#C9B8E8','#9AD4E8','#B8E0A0'];
     const count = 26;
+    const dotW = Math.max(2.5, size*0.0125), dotH = Math.max(5, size*0.025);
     for(let i=0;i<count;i++){
       const a = (i/count)*Math.PI*2;
       const r = radius + 3;
@@ -279,7 +307,7 @@
       ctx.translate(x,y);
       ctx.rotate(a + Math.random()*0.6);
       ctx.fillStyle = sprinkleColors[i % sprinkleColors.length];
-      ctx.fillRect(-2, -4, 4, 8);
+      ctx.fillRect(-dotW/2, -dotH/2, dotW, dotH);
       ctx.restore();
     }
   }
@@ -287,6 +315,8 @@
   function drawWheel(){
     ctx.clearRect(0,0,size,size);
     drawSprinkles();
+    const fontSize = Math.max(10, size*0.039);
+    const lineHeight = Math.max(11, size*0.0438);
     segments.forEach((seg, i) => {
       const startDeg = -90 + i*segDeg;
       const endDeg = startDeg + segDeg;
@@ -310,11 +340,10 @@
       ctx.translate(cx, cy);
       ctx.rotate(midRad);
       ctx.fillStyle = '#3A2E39';
-      ctx.font = '600 12.5px Kanit, sans-serif';
+      ctx.font = `600 ${fontSize}px Kanit, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const lines = seg.label;
-      const lineHeight = 14;
       lines.forEach((line, idx) => {
         const yOff = (idx - (lines.length-1)/2) * lineHeight;
         ctx.fillText(line, radius*0.62, yOff);
@@ -322,7 +351,21 @@
       ctx.restore();
     });
   }
+
+  fitCanvasToDisplay();
   drawWheel();
+
+  // วาดใหม่เมื่อขนาดจอเปลี่ยน (หมุนจอ iPad, ปรับขนาดหน้าต่าง, เปิด/ปิดคีย์บอร์ดบนมือถือ)
+  let resizeTimer = null;
+  const refitAndRedraw = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      fitCanvasToDisplay();
+      drawWheel();
+    }, 120);
+  };
+  window.addEventListener('resize', refitAndRedraw);
+  window.addEventListener('orientationchange', refitAndRedraw);
 
   // legend chips
   const legend = document.getElementById('legend');
