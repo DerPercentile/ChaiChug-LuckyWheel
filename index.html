@@ -247,33 +247,37 @@
   <div class="modal">
     <div class="modal-icon" id="modalIcon">☁️</div>
     <h2 id="modalTitle">ไม่ได้อะไรเลย</h2>
-    <p id="modalDesc">เสียใจด้วย!</p>
+    <p id="modalDesc">เก็บดวงไว้รอบหน้านะ ของหวานยังรออยู่!</p>
     <button id="modalClose">ปิด</button>
   </div>
 </div>
 
 <script>
   // ---- ตั้งค่ารางวัล ----
-  // ค่าเริ่มต้น: ทุกช่องล็อกไป "ไม่ได้อะไรเลย" ยกเว้น เพิ่มท็อปปิ้ง และ รีฟิลฟรี ที่เปิดให้สุ่มได้จริง 0.5%
+  // "ไม่ได้อะไรเลย" มี 4 ช่อง กระจายแทรกสลับกับช่องอื่น ไม่ให้ติดกันเป็นกลุ่มเดียว
+  // เพิ่มท็อปปิ้ง และ รีฟิลฟรี เปิดให้สุ่มได้จริง 0.5% ต่อช่อง ส่วนที่เหลือ (99%) สุ่มลงช่อง "ไม่ได้อะไรเลย" ช่องใดช่องหนึ่งแบบสุ่ม (ไม่ใช่ช่องเดิมทุกครั้ง)
   const segments = [
-    { label: ['ส่วนลด', '5 บาท'], color: 'var(--mint)',     hex:'#B8E0A0' },
-    { label: ['เพิ่ม', 'ท็อปปิ้ง'], color: 'var(--peach)',   hex:'#FFB6A3' },
-    { label: ['1 แถม 1'],          color: 'var(--lavender)',hex:'#C9B8E8' },
-    { label: ['ลด 50%'],           color: 'var(--butter)',  hex:'#FFD972' },
-    { label: ['ฟรี!'],             color: 'var(--sky)',     hex:'#9AD4E8' },
-    { label: ['รีฟิลฟรี', '1 ครั้ง'], color: 'var(--teal)',  hex:'#7FD1C8' },
-    { label: ['ไม่ได้', 'อะไรเลย'], color: 'var(--rose)',    hex:'#D9A6A6' }
+    { type:'lose',    label: ['ไม่ได้', 'อะไรเลย'],      hex:'#D9A6A6' },
+    { type:'other',   label: ['ส่วนลด', '5 บาท'],         hex:'#B8E0A0' },
+    { type:'topping', label: ['เพิ่ม', 'ท็อปปิ้ง'],        hex:'#FFB6A3' },
+    { type:'lose',    label: ['ไม่ได้', 'อะไรเลย'],      hex:'#D9A6A6' },
+    { type:'other',   label: ['1 แถม 1'],                 hex:'#C9B8E8' },
+    { type:'lose',    label: ['ไม่ได้', 'อะไรเลย'],      hex:'#D9A6A6' },
+    { type:'other',   label: ['ลด 50%'],                  hex:'#FFD972' },
+    { type:'other',   label: ['ฟรี!'],                    hex:'#9AD4E8' },
+    { type:'lose',    label: ['ไม่ได้', 'อะไรเลย'],      hex:'#D9A6A6' },
+    { type:'refill',  label: ['รีฟิลฟรี', '1 ครั้ง'],      hex:'#7FD1C8' }
   ];
-  const TOPPING_INDEX = 1;          // เพิ่มท็อปปิ้ง
-  const REFILL_INDEX = 5;           // รีฟิลฟรี 1 ครั้ง
-  const LOSE_INDEX = segments.length - 1; // ไม่ได้อะไรเลย
+  const TOPPING_INDEX = segments.findIndex(s => s.type === 'topping');
+  const REFILL_INDEX  = segments.findIndex(s => s.type === 'refill');
+  const LOSE_INDICES  = segments.reduce((arr, s, i) => { if (s.type === 'lose') arr.push(i); return arr; }, []);
 
-  // สุ่มผลลัพธ์แบบมีน้ำหนัก: เพิ่มท็อปปิ้ง 0.5%, รีฟิลฟรี 1 ครั้ง 0.5%, ที่เหลือ 99% ไม่ได้อะไรเลย
+  // สุ่มผลลัพธ์แบบมีน้ำหนัก: เพิ่มท็อปปิ้ง 0.5%, รีฟิลฟรี 1 ครั้ง 0.5%, ที่เหลือ 99% สุ่มลงช่อง "ไม่ได้อะไรเลย" ช่องใดช่องหนึ่ง
   function pickResultIndex(){
     const roll = Math.random() * 100;
     if (roll < 0.5) return TOPPING_INDEX;   // 0% - 0.5%
     if (roll < 1) return REFILL_INDEX;      // 0.5% - 1%
-    return LOSE_INDEX;                      // 1% - 100%
+    return LOSE_INDICES[Math.floor(Math.random() * LOSE_INDICES.length)]; // 1% - 100%
   }
 
   const canvas = document.getElementById('wheel');
@@ -315,8 +319,8 @@
   function drawWheel(){
     ctx.clearRect(0,0,size,size);
     drawSprinkles();
-    const fontSize = Math.max(10, size*0.039);
-    const lineHeight = Math.max(11, size*0.0438);
+    const fontSize = Math.max(9, size*0.033);
+    const lineHeight = Math.max(10, size*0.0375);
     segments.forEach((seg, i) => {
       const startDeg = -90 + i*segDeg;
       const endDeg = startDeg + segDeg;
@@ -367,12 +371,16 @@
   window.addEventListener('resize', refitAndRedraw);
   window.addEventListener('orientationchange', refitAndRedraw);
 
-  // legend chips
+  // legend chips (ตัดชื่อซ้ำออก เผื่อมีหลายช่องในวงล้อใช้ชื่อเดียวกัน)
   const legend = document.getElementById('legend');
+  const seenLabels = new Set();
   segments.forEach(seg => {
+    const text = seg.label.join(' ');
+    if (seenLabels.has(text)) return;
+    seenLabels.add(text);
     const chip = document.createElement('span');
     chip.className = 'chip';
-    chip.textContent = seg.label.join(' ');
+    chip.textContent = text;
     legend.appendChild(chip);
   });
 
@@ -429,7 +437,8 @@
     const resultIndex = pickResultIndex(); // สุ่มผลลัพธ์ตามน้ำหนักที่ตั้งไว้
 
     const targetMod = computeTargetRotationMod(resultIndex);
-    const jitter = (Math.random()*22 - 11); // +-11deg เพื่อให้ดูเป็นธรรมชาติ ไม่ตรงจุดเดิมทุกครั้ง
+    const jitterMax = Math.max(4, segDeg*0.3); // ขยับสุ่มในช่องได้โดยไม่ล้นไปช่องข้างเคียง ปรับตามความกว้างช่องอัตโนมัติ
+    const jitter = (Math.random()*2 - 1) * jitterMax;
     const desiredMod = ((targetMod + jitter) % 360 + 360) % 360;
 
     const currentMod = ((currentAngle % 360) + 360) % 360;
@@ -457,7 +466,7 @@
 
   function showResult(index){
     const result = segments[index].label.join(' ');
-    const isWin = index !== LOSE_INDEX;
+    const isWin = segments[index].type !== 'lose';
     document.getElementById('modalIcon').textContent = isWin ? '🎉' : '☁️';
     document.getElementById('modalTitle').textContent = result;
     document.getElementById('modalDesc').textContent = isWin
